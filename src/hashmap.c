@@ -2,6 +2,8 @@
 #define PRIME_SEED_1 17
 #define PRIME_SEED_2 97
 #define KEY_CHARS 128
+#define VALUE_CHARS 128
+#define NODE_SIZE sizeof(Node)
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,10 +17,8 @@ typedef struct Node Node;
 struct Node {
     Node* next;
     char key[KEY_CHARS];
-    char value; 
+    char value[VALUE_CHARS]; 
 };
-
-#define NODE_SIZE sizeof(Node)
 
 
 Node* create_sentinel_node(){
@@ -29,7 +29,7 @@ Node* create_sentinel_node(){
         Node* node = (Node*)ptr; // safely typecast the pointer
         node->next = NULL;
         strcpy(node->key, "\0");
-        node->value = '\0';
+        strcpy(node->value, "\0");
         return node;
     }
 }
@@ -40,12 +40,11 @@ size_t modular_hash(char* string) {
     for (char* character=string; *character != '\0'; character++) {
         hash += ((int)*character + PRIME_SEED_1) * PRIME_SEED_2; 
     }
-    return 0; // TODO
-    // return hash;
+    return hash;
 }
 
 
-Node** hm_create(){
+Node** hm_create(void){
     static Node* keys[BUCKETS] = {};
     for (size_t i=0; i<BUCKETS; i++){
         keys[i] = create_sentinel_node();
@@ -53,20 +52,21 @@ Node** hm_create(){
     return keys;
 }
 
-void hm_add(Node** hmap, char key[], char value){
+void hm_add(Node** hmap, char key[], char value[]){
     Node* node = hmap[modular_hash(key)];
 
-    if (node->value == '\0'){
-        node->value = value;
+    if (strcmp(node->value, "\0") == 0){
+        // there's no item in this bucket.
         strcpy(node->key, key);
+        strcpy(node->value, value);
         return;
     }
 
-    // TODO refactor
     while(true){
-        // check for a key collision
         if (strcmp(node->key, key) == 0){
-            node->value = value;
+            // the key already exists as a node in the linked list
+            // so we can simply replace the value.
+            strcpy(node->value, value);
             return;
         }
         if (node->next == NULL){
@@ -74,14 +74,13 @@ void hm_add(Node** hmap, char key[], char value){
             void* ptr = malloc(NODE_SIZE);
             if (ptr == NULL){
                 exit(EXIT_FAILURE);
-            } else {
-                Node* new_node = (Node*)ptr; // safely typecast the pointer
-                new_node->next = NULL;
-                new_node->value = value;
-                strcpy(new_node->key, key);
-                node->next = new_node;
-                return;
-            }
+            } 
+            Node* new_node = (Node*)ptr; // safely typecast the pointer
+            new_node->next = NULL;
+            strcpy(node->value, value);
+            strcpy(new_node->key, key);
+            node->next = new_node;
+            return;
         }
         node = node->next;
     }
@@ -91,16 +90,15 @@ void hm_del(Node** hmap, char key[]){
     size_t khash = modular_hash(key);
     Node* node = hmap[khash];
     
-    // find the correct node in the linked list.
-    // if it's the first and only node, reset it to the sentinel node.
-
-    // if the prev node is defined and the target node has a non-null 'next', replace the prev node's next with that.
-    // delete the node if it's the last node, and update the 'next' of the prev. node to NULL.
     void* prev_node = NULL;
     Node* head = node;
     
     // find the node
     while (strcmp(head->key, key) != 0){
+        if (head->next == NULL){
+            // the key doesn't exist in this hashmap.
+            return;
+        }
         head = head->next;
         prev_node = head;
     }
@@ -110,7 +108,7 @@ void hm_del(Node** hmap, char key[]){
         // are we deleting the only node?
         if (head->next == NULL){
             // reset the node to the sentinel node.
-            node->value = '\0';
+            strcpy(node->value, "\0");
             strcpy(node->key, "\0");
         } else {
             // we are deleting the first of n>1 nodes.
@@ -132,64 +130,15 @@ void hm_del(Node** hmap, char key[]){
 
 }
 
-char hm_get(Node** hmap, char* key){
+char* hm_get(Node** hmap, char key[]){
     Node* node = hmap[modular_hash(key)];
 
-    // skip list elements in the bucket that don't match our key.
+    // skip list elements in the bucket (linked list) that don't match our key.
     while (strcmp(node->key, key) != 0){
         if (node->next==NULL){
-            return '\0';
+            return "\0";
         }
         node = node->next;
     }
     return node->value;
-}
-
-void main(){
-    // test adding, getting and deleting two items.
-    Node** hashmap = hm_create();
-    
-    hm_add(hashmap, "bob", 'x');
-    char a = hm_get(hashmap, "bob");
-    assert(a=='x');
-
-    hm_del(hashmap, "bob");
-    a = hm_get(hashmap, "bob");
-    assert(a=='\0');
-
-    hm_add(hashmap, "bob", 'x');
-    hm_add(hashmap, "bob", 'y');
-    a = hm_get(hashmap, "bob");
-    assert(a=='y');
-    
-    hm_add(hashmap, "alice", 'z');
-    a = hm_get(hashmap, "alice");
-    assert(a=='z');
-
-    a = hm_get(hashmap, "bob");
-    assert(a=='y');
-
-    hm_del(hashmap, "bob");
-    a = hm_get(hashmap, "bob");
-    assert(a=='\0');
-
-    // test deleting the last item
-    Node** hashmap2 = hm_create();
-    hm_add(hashmap2, "bob", 'x');
-    hm_add(hashmap2, "alice", 'x');
-    hm_add(hashmap2, "jane", 'x');
-
-    hm_del(hashmap2, "jane");
-    char b = hm_get(hashmap2, "jane");
-    assert(b=='\0');
-
-    // test deleting an item in the middle.
-    Node** hashmap3 = hm_create();
-    hm_add(hashmap3, "bob", 'x');
-    hm_add(hashmap3, "alice", 'x');
-    hm_add(hashmap3, "jane", 'x');
-
-    hm_del(hashmap3, "alice");
-    char c = hm_get(hashmap3, "alice");
-    assert(c=='\0');
 }
