@@ -1,24 +1,15 @@
-#define BUCKETS 1000000
-#define PRIME_SEED_1 17
-#define PRIME_SEED_2 97
-#define KEY_CHARS 128
-#define VALUE_CHARS 128
-#define NODE_SIZE sizeof(Node)
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-#include <assert.h>
+#include <stddef.h>
 
-/* A key-value node in a single-linked list. */
-typedef struct Node Node;
+#include "hashmap.h"
 
-struct Node {
-    Node* next;
-    char key[KEY_CHARS];
-    char value[VALUE_CHARS]; 
-};
+#define BUCKETS 1000000
+#define PRIME_SEED_1 17
+#define PRIME_SEED_2 97
+#define NODE_SIZE sizeof(Node)
 
 
 Node* create_sentinel_node(){
@@ -43,19 +34,24 @@ size_t modular_hash(char* string) {
     return hash;
 }
 
-
 Node** hm_create(void){
-    static Node* keys[BUCKETS] = {};
-    for (size_t i=0; i<BUCKETS; i++){
-        keys[i] = create_sentinel_node();
+    void* ptr = malloc(sizeof(Node*) * BUCKETS);
+    if (ptr == NULL){
+        exit(EXIT_FAILURE);
+    } else {
+        Node** keys = (Node**)ptr;
+        for (size_t i=0; i<BUCKETS; i++){
+            keys[i] = create_sentinel_node();
+        }
+        return keys;
     }
-    return keys;
+
 }
 
 void hm_add(Node** hmap, char key[], char value[]){
     Node* node = hmap[modular_hash(key)];
 
-    if (strcmp(node->value, "\0") == 0){
+    if (node->value[0] == '\0'){
         // there's no item in this bucket.
         strcpy(node->key, key);
         strcpy(node->value, value);
@@ -108,8 +104,8 @@ void hm_del(Node** hmap, char key[]){
         // are we deleting the only node?
         if (head->next == NULL){
             // reset the node to the sentinel node.
-            strcpy(node->value, "\0");
-            strcpy(node->key, "\0");
+            node->value[0] = '\0';
+            node->key[0] = '\0';
         } else {
             // we are deleting the first of n>1 nodes.
             hmap[khash] = head->next;
