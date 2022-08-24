@@ -1,5 +1,16 @@
-#include <stddef.h>
-#include "hashmap.c"
+#ifndef HASHMAP_H_
+#define HASHMAP_H_
+
+#define KEY_CHARS 128
+#define VALUE_CHARS 128
+
+typedef struct Node Node;
+
+struct Node {
+    Node* next;
+    char key[KEY_CHARS];
+    char value[VALUE_CHARS]; 
+};
 
 /* Create a hashmap.*/
 Node** hm_create(void);
@@ -14,3 +25,5 @@ void hm_del(Node** hmap, char key[]);
  * @returns the value corresponding to 'key' or the terminating character '\0'
  * if no such item exists. */
 char* hm_get(Node** hmap, char key[]);
+
+#endif

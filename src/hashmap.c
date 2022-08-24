@@ -1,51 +1,36 @@
+#include "hashmap.h"
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+
 #define BUCKETS 1000000
 #define PRIME_SEED_1 17
 #define PRIME_SEED_2 97
-#define KEY_CHARS 128
-#define VALUE_CHARS 128
-#define NODE_SIZE sizeof(Node)
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
 
 /* A key-value node in a single-linked list. */
-typedef struct Node Node;
-
-struct Node {
-    Node* next;
-    char key[KEY_CHARS];
-    char value[VALUE_CHARS]; 
-};
-
-
 Node* create_sentinel_node(){
-    void* ptr = malloc(NODE_SIZE);
-    if (ptr == NULL){
+    Node* node = malloc(sizeof(Node));
+    if (!node){
         exit(EXIT_FAILURE);
-    } else {
-        Node* node = (Node*)ptr; // safely typecast the pointer
-        node->next = NULL;
-        strcpy(node->key, "\0");
-        strcpy(node->value, "\0");
-        return node;
     }
+    node->next = NULL;
+    strcpy(node->key, "\0");
+    strcpy(node->value, "\0");
+    return node;
 }
 
 
 size_t modular_hash(char* string) {
     size_t hash = 0;
     for (char* character=string; *character != '\0'; character++) {
-        hash += ((int)*character + PRIME_SEED_1) * PRIME_SEED_2; 
+        hash += (*character + PRIME_SEED_1) * PRIME_SEED_2; 
     }
     return hash;
 }
 
 
 Node** hm_create(void){
-    static Node* keys[BUCKETS] = {};
+    static Node* keys[BUCKETS] = {}; // this makes the hashmap a singleton. Use malloc instead
     for (size_t i=0; i<BUCKETS; i++){
         keys[i] = create_sentinel_node();
     }
@@ -69,13 +54,12 @@ void hm_add(Node** hmap, char key[], char value[]){
             strcpy(node->value, value);
             return;
         }
-        if (node->next == NULL){
+        if (!node->next){
             // no more nodes, append a new node to the linked list.
-            void* ptr = malloc(NODE_SIZE);
-            if (ptr == NULL){
+            Node* new_node = malloc(sizeof(Node));
+            if (!new_node){
                 exit(EXIT_FAILURE);
             } 
-            Node* new_node = (Node*)ptr; // safely typecast the pointer
             new_node->next = NULL;
             strcpy(node->value, value);
             strcpy(new_node->key, key);
@@ -90,12 +74,12 @@ void hm_del(Node** hmap, char key[]){
     size_t khash = modular_hash(key);
     Node* node = hmap[khash];
     
-    void* prev_node = NULL;
+    Node* prev_node = NULL;
     Node* head = node;
     
     // find the node
     while (strcmp(head->key, key) != 0){
-        if (head->next == NULL){
+        if (!head->next){
             // the key doesn't exist in this hashmap.
             return;
         }
@@ -104,9 +88,9 @@ void hm_del(Node** hmap, char key[]){
     }
 
     // are we deleting the first node?
-    if (prev_node == NULL){
+    if (!prev_node){
         // are we deleting the only node?
-        if (head->next == NULL){
+        if (!head->next){
             // reset the node to the sentinel node.
             strcpy(node->value, "\0");
             strcpy(node->key, "\0");
@@ -116,16 +100,14 @@ void hm_del(Node** hmap, char key[]){
         }
     } else {
         // there must be a previous node.
-        Node* prev_node = (Node*)prev_node;
-
         // is this the last node?
-        if (head->next == NULL){
+        if (!head->next){
             prev_node->next = NULL;
         } else {
             // we are deleting neither the first nor the last node.
             prev_node->next = head->next;
         }
-        free(head);            
+        free(head);
     }
 
 }
@@ -135,7 +117,7 @@ char* hm_get(Node** hmap, char key[]){
 
     // skip list elements in the bucket (linked list) that don't match our key.
     while (strcmp(node->key, key) != 0){
-        if (node->next==NULL){
+        if (!node->next){
             return "\0";
         }
         node = node->next;

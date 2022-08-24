@@ -1,4 +1,7 @@
 #include "hashmap.h"
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
 
 /** TESTS
  * These tests test the collision handling of the hashmap.
