@@ -4,6 +4,8 @@
 #define KEY_CHARS 128
 #define VALUE_CHARS 128
 
+
+/* A key-value node in a single-linked list. */
 typedef struct Node Node;
 
 struct Node {

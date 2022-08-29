@@ -1,3 +1,7 @@
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "hashmap.h"
 #include <assert.h>
 #include <stdio.h>
