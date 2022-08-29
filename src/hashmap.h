@@ -1,7 +1,9 @@
-#pragma once
+#ifndef HASHMAP_H_
+#define HASHMAP_H_
 
 #define KEY_CHARS 128
 #define VALUE_CHARS 128
+
 
 /* A key-value node in a single-linked list. */
 typedef struct Node Node;
@@ -25,3 +27,5 @@ void hm_del(Node** hmap, char key[]);
  * @returns the value corresponding to 'key' or the terminating character '\0'
  * if no such item exists. */
 char* hm_get(Node** hmap, char key[]);
+
+#endif
